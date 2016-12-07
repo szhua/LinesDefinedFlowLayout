@@ -6,9 +6,9 @@
 可以监测行数的变化。
 可以监测是否达到最大的行数。
 
-![](https://github.com/szhua/LinesDefinedFlowLayout/blob/master/app/1.jpg);
-![](https://github.com/szhua/LinesDefinedFlowLayout/blob/master/app/2.jpg);
+<img src='https://github.com/szhua/LinesDefinedFlowLayout/blob/master/app/1.jpg' width =300px ;><img>
 
+<img src='https://github.com/szhua/LinesDefinedFlowLayout/blob/master/app/2.jpg' width =300px ;><img>
 
 ```java
  /**
