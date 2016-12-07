@@ -20,10 +20,12 @@ public class FlowLayout extends ViewGroup {
     private static final int RIGHT = 1;
     private int maxLines;
     private int height;
+
+    //设置最大的行数为MAX_INTEGER；
+    private static  final int DEFAULT_MAXLINES=Integer.MAX_VALUE ;
+
     protected List<List<View>> mAllViews = new ArrayList<List<View>>();
     protected List<Integer> mLineHeight = new ArrayList<Integer>();
-    protected List<Integer> mLineWidth = new ArrayList<Integer>();
-    private int mGravity;
     private List<View> lineViews = new ArrayList<>();
     private OnLinesChangeListener onLinesChangeListener;
     private OnLinesUpToMaxListener onLinesUpToMaxListener;
@@ -32,19 +34,14 @@ public class FlowLayout extends ViewGroup {
         this.maxLines = minLines;
     }
 
-    public List<Integer> getmLineHeight() {
-        return mLineHeight;
-    }
-
-    public List<List<View>> getmAllViews() {
-        return mAllViews;
-    }
 
     public FlowLayout(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.TagFlowLayout);
-        mGravity = ta.getInt(R.styleable.TagFlowLayout_gravity, LEFT);
         maxLines = ta.getInt(R.styleable.TagFlowLayout_maxLines, 0);
+        if(maxLines<=0){
+            throw  new IllegalArgumentException("Your maxLines must greater than 0 !");
+        }
         ta.recycle();
     }
 
@@ -63,7 +60,12 @@ public class FlowLayout extends ViewGroup {
         int sizeHeight = MeasureSpec.getSize(heightMeasureSpec);
         int modeHeight = MeasureSpec.getMode(heightMeasureSpec);
 
-        //wrap_content
+         //子view占的实际空间宽度；
+        int containerWidth =sizeWidth - getPaddingLeft() - getPaddingRight() ;
+
+        /**
+         * 自适应时候的width和height ;
+         */
         int width = 0;
         int height = 0;
 
@@ -74,27 +76,7 @@ public class FlowLayout extends ViewGroup {
 
         for (int i = 0; i < cCount; i++) {
             View child = getChildAt(i);
-            if (child.getVisibility() == View.GONE) {
-                if (i == cCount - 1) {
-                    width = Math.max(lineWidth, width);
-                    //  height += lineHeight;
-                    if (maxLines > 0 && maxLines <= lines) {
-                        height = height;
-                        lines=lines+1 ;
-                    } else {
-                        height += lineHeight;
-                        lines = lines + 1;
-                        if (onLinesChangeListener != null) {
-                            this.onLinesChangeListener.onlinesChanged(lines);
-                        }
-                    }
-                    if (onLinesUpToMaxListener != null) {
-                        this.onLinesUpToMaxListener.onlinesUptoMax(lines);
-                    }
 
-                }
-                continue;
-            }
             measureChild(child, widthMeasureSpec, heightMeasureSpec);
             MarginLayoutParams lp = (MarginLayoutParams) child
                     .getLayoutParams();
@@ -104,43 +86,28 @@ public class FlowLayout extends ViewGroup {
             int childHeight = child.getMeasuredHeight() + lp.topMargin
                     + lp.bottomMargin;
 
-            if (lineWidth + childWidth > sizeWidth - getPaddingLeft() - getPaddingRight()) {
+            //第一个childView，直接测量赋值；
+            if(i==0){
+                lineHeight =childHeight ;
+                lineWidth +=childWidth;
+                continue;
+            }
+
+
+            if (lineWidth + childWidth >containerWidth) {
                 width = Math.max(width, lineWidth);
                 lineWidth = childWidth;
-
-                if (maxLines > 0 && maxLines <= lines) {
-                    height = height;
-                } else {
+                if ( lines < maxLines) {
                     height += lineHeight;
                     lines = lines + 1;
-                    if (onLinesChangeListener != null) {
-                        this.onLinesChangeListener.onlinesChanged(lines);
-                    }
+
                 }
                 lineHeight = childHeight;
-
-
             } else {
                 lineWidth += childWidth;
                 lineHeight = Math.max(lineHeight, childHeight);
             }
-            if (i == cCount - 1) {
-                Log.i("szhua", "maxsize");
-                width = Math.max(lineWidth, width);
-                if (maxLines > 0 && maxLines <= lines) {
-                    height = height;
-                    lines=lines+1 ;
-                } else {
-                    height += lineHeight;
-                    lines = lines + 1;
-                    if (onLinesChangeListener != null) {
-                        this.onLinesChangeListener.onlinesChanged(lines);
-                    }
-                }
-                if (onLinesUpToMaxListener != null) {
-                    this.onLinesUpToMaxListener.onlinesUptoMax(lines);
-                }
-            }
+
         }
 
         this.height = lines;
@@ -153,12 +120,16 @@ public class FlowLayout extends ViewGroup {
     }
 
 
+    public void setMaxLines(int maxLines) {
+        this.maxLines = maxLines;
+        requestLayout();
+    }
+
     //规定子控件的布局位置 ；
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         mAllViews.clear();
         mLineHeight.clear();
-        mLineWidth.clear();
         lineViews.clear();
 
         int width = getWidth();
@@ -180,7 +151,17 @@ public class FlowLayout extends ViewGroup {
             if (childWidth + lineWidth + lp.leftMargin + lp.rightMargin > width - getPaddingLeft() - getPaddingRight()) {
                 mLineHeight.add(lineHeight);
                 mAllViews.add(lineViews);
-                mLineWidth.add(lineWidth);
+
+                if (onLinesChangeListener != null) {
+                    this.onLinesChangeListener.onlinesChanged(mLineHeight.size());
+                }
+                if(onLinesUpToMaxListener!=null){
+                if(mLineHeight.size()==maxLines){
+                  onLinesUpToMaxListener.onlinesUptoMax(maxLines);
+                }else if(mLineHeight.size()+1==maxLines){
+                    onLinesUpToMaxListener.onlinesGreaterThanMaxFisrt(maxLines+1);
+                }
+                }
 
                 lineWidth = 0;
                 lineHeight = childHeight + lp.topMargin + lp.bottomMargin;
@@ -193,11 +174,10 @@ public class FlowLayout extends ViewGroup {
 
         }
         mLineHeight.add(lineHeight);
-        mLineWidth.add(lineWidth);
         mAllViews.add(lineViews);
 
 
-        int left = getPaddingLeft();
+
         int top = getPaddingTop();
 
         int lineNum = mAllViews.size();
@@ -206,26 +186,11 @@ public class FlowLayout extends ViewGroup {
             lineViews = mAllViews.get(i);
             lineHeight = mLineHeight.get(i);
 
-            // set gravity
-            int currentLineWidth = this.mLineWidth.get(i);
-            switch (this.mGravity) {
-                case LEFT:
-                    left = getPaddingLeft();
-                    break;
-                case CENTER:
-                    left = (width - currentLineWidth) / 2 + getPaddingLeft();
-                    break;
-                case RIGHT:
-                    left = width - currentLineWidth + getPaddingLeft();
-                    break;
-            }
+
+            int  left = getPaddingLeft();
 
             for (int j = 0; j < lineViews.size(); j++) {
                 View child = lineViews.get(j);
-                if (child.getVisibility() == View.GONE) {
-                    continue;
-                }
-
                 MarginLayoutParams lp = (MarginLayoutParams) child
                         .getLayoutParams();
 
@@ -258,12 +223,7 @@ public class FlowLayout extends ViewGroup {
     protected LayoutParams generateLayoutParams(LayoutParams p) {
         return new MarginLayoutParams(p);
     }
-    public interface OnLinesChangeListener {
-        void onlinesChanged(int lines);
-    }
-    public interface OnLinesUpToMaxListener {
-        void onlinesUptoMax(int maxLines);
-    }
+
     public void setOnLinesChangeListener(OnLinesChangeListener onLinesChangeListener) {
         this.onLinesChangeListener = onLinesChangeListener;
     }

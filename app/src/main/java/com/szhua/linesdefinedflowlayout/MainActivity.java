@@ -8,6 +8,8 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.szhua.linesdefinedflowlayout.flowlayout.FlowLayout;
+import com.szhua.linesdefinedflowlayout.flowlayout.OnLinesChangeListener;
+import com.szhua.linesdefinedflowlayout.flowlayout.OnLinesUpToMaxListener;
 import com.szhua.linesdefinedflowlayout.flowlayout.TagAdapter;
 import com.szhua.linesdefinedflowlayout.flowlayout.TagFlowLayout;
 
@@ -42,21 +44,23 @@ public class MainActivity extends AppCompatActivity {
            }
        });
 
-        tagFlowLayout.setOnLinesChangeListener(new FlowLayout.OnLinesChangeListener() {
+        tagFlowLayout.setOnLinesChangeListener(new OnLinesChangeListener() {
             @Override
             public void onlinesChanged(int lines) {
                 Log.i("szhua", "Listen+lines" + lines);
             }
         });
-        tagFlowLayout.setOnLinesUpToMaxListener(new FlowLayout.OnLinesUpToMaxListener() {
+        tagFlowLayout.setOnLinesUpToMaxListener(new OnLinesUpToMaxListener() {
             @Override
             public void onlinesUptoMax(int maxLines) {
                 Log.i("szhua", "listen+max" + maxLines);
-                if (maxLines <= 3) {
-                    more_tag_bt.setVisibility(View.GONE);
-                } else {
+
+            }
+
+            @Override
+            public void onlinesGreaterThanMaxFisrt(int lines) {
+                Log.i("szhua", "listen+max" + lines);
                     more_tag_bt.setVisibility(View.VISIBLE);
-                }
             }
         });
 
@@ -64,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 if (isExpanded) {
-                    tagFlowLayout.setMinLines(0);
+                    tagFlowLayout.setMinLines(Integer.MAX_VALUE);
                     tagFlowLayout.onChanged();
                     isExpanded = false;
                     more_tag_bt.setText("收起");
